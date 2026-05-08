@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스마트 문제은행 불러오기 v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --teal: #1D9E75;
+  --teal-light: #E8F8F2;
+  --teal-mid: #9FE1CB;
+  --teal-dark: #0F6E56;
+  --teal-deep: #085041;
+  --purple: #6C5CE7;
+  --purple-light: #EEF0FD;
+  --amber: #E8A020;
+  --amber-light: #FEF5E7;
+  --red: #E24B4A;
+  --red-light: #FEF0F0;
+  --gray-50: #F9F9F8;
+  --gray-100: #F2F1EC;
+  --gray-200: #E4E2DB;
+  --gray-300: #CCCAC2;
+  --gray-400: #9E9C94;
+  --gray-500: #7A7872;
+  --gray-600: #5A5855;
+  --gray-700: #3E3D3A;
+  --gray-800: #2C2B28;
+  --white: #FFFFFF;
+  --border: rgba(0,0,0,0.08);
+  --border-md: rgba(0,0,0,0.13);
+  --border-strong: rgba(0,0,0,0.20);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.07);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.09), 0 1px 4px rgba(0,0,0,0.05);
+  --shadow-lg: 0 16px 48px rgba(0,0,0,0.14), 0 4px 14px rgba(0,0,0,0.07);
+  --shadow-hover: 0 6px 20px rgba(29,158,117,0.14), 0 2px 6px rgba(29,158,117,0.08);
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-2xl: 24px;
+  --font: 'Noto Sans KR', sans-serif;
+  --transition: 0.16s ease;
+}
+
+body {
+  font-family: var(--font);
+  background: #DDDBD3;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* ────────────────── APP SHELL ────────────────── */
+.app-shell {
+  width: 1280px;
+  height: 780px;
+  background: var(--gray-100);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+.topbar {
+  height: 48px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.topbar-title { font-size: 13px; color: var(--gray-600); font-weight: 500; }
+.topbar-spacer { flex: 1; }
+.tb-btn {
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  padding: 6px 14px; border-radius: var(--r-sm); cursor: pointer;
+  border: 1px solid var(--border-md); background: none; color: var(--gray-700);
+  transition: background var(--transition);
+}
+.tb-btn:hover { background: var(--gray-100); }
+.tb-btn.primary { background: var(--teal); color: #fff; border-color: var(--teal); }
+.tb-btn.primary:hover { background: var(--teal-dark); }
+.main-area { flex: 1; display: flex; overflow: hidden; }
+.slide-panel {
+  width: 188px; background: #E5E3DB; border-right: 1px solid var(--border);
+  flex-shrink: 0; padding: 12px; display: flex; flex-direction: column;
+  gap: 8px; overflow-y: auto;
+}
+.slide-thumb {
+  background: var(--white); border-radius: var(--r-sm);
+  aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--gray-400); border: 2px solid transparent;
+  cursor: pointer; position: relative; transition: border-color var(--transition);
+}
+.slide-thumb.active { border-color: var(--teal); }
+.slide-num { position: absolute; top: 4px; left: 5px; font-size: 10px; color: var(--gray-400); font-weight: 600; }
+.canvas-area {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  background: #D0CEC6; position: relative;
+}
+.canvas-page {
+  width: 640px; height: 480px; background: var(--white);
+  border-radius: var(--r-sm); box-shadow: var(--shadow-md);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gray-300); font-size: 14px;
+}
+
+/* ────────────────── OVERLAY ────────────────── */
+.overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.48);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; backdrop-filter: blur(2px);
+}
+.overlay.hidden { display: none; }
+
+/* ────────────────── MAIN MODAL ────────────────── */
+.modal {
+  background: var(--white);
+  border-radius: var(--r-2xl);
+  width: 1040px;
+  height: 700px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: fadeUp 0.22s ease;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Modal Header ── */
+.modal-header {
+  display: flex; align-items: center;
+  padding: 18px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0; gap: 12px;
+}
+.modal-header h2 { font-size: 16px; font-weight: 700; color: var(--gray-800); }
+.header-sub { font-size: 12px; color: var(--gray-400); margin-left: 2px; margin-top: 1px; }
+.modal-header-spacer { flex: 1; }
+.result-count-pill {
+  font-size: 12px; font-weight: 600;
+  background: var(--gray-100); color: var(--gray-600);
+  padding: 4px 12px; border-radius: 20px;
+  border: 1px solid var(--border-md);
+}
+.result-count-pill span { color: var(--teal-dark); }
+.modal-close {
+  width: 32px; height: 32px; background: none; border: none;
+  border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--gray-400); font-size: 18px; line-height: 1;
+  transition: background var(--transition), color var(--transition);
+}
+.modal-close:hover { background: var(--gray-100); color: var(--gray-800); }
+
+/* ── Filter Bar ── */
+.filter-bar {
+  padding: 12px 24px;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.filter-row-top {
+  display: flex; align-items: flex-end; gap: 10px;
+}
+.filter-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.filter-group.no-grow { flex: 0 0 auto; }
+
+.filter-field-label {
+  font-size: 11px; font-weight: 500; color: var(--gray-500);
+  white-space: nowrap;
+}
+
+.filter-select {
+  font-family: var(--font); font-size: 13px; color: var(--gray-800);
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 7px 28px 7px 10px;
+  cursor: pointer; appearance: none; width: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239E9C94' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  min-width: 0;
+}
+.filter-select:hover { border-color: var(--teal-mid); }
+.filter-select:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(29,158,117,0.10); }
+.filter-select.active-filter { border-color: var(--teal); background-color: var(--teal-light); color: var(--teal-dark); }
+
+.filter-divider {
+  width: 1px; height: 28px; background: var(--border-md);
+  margin: 0 4px; flex-shrink: 0; align-self: flex-end; margin-bottom: 2px;
+}
+.filter-spacer { flex: 1; }
+
+
+
+.search-box {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--white); border: 1px solid var(--border-md);
+  border-radius: var(--r-sm); padding: 7px 12px;
+  min-width: 200px; transition: border-color var(--transition), box-shadow var(--transition);
+}
+.search-box:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(29,158,117,0.10); }
+.search-icon { color: var(--gray-400); flex-shrink: 0; }
+.search-input {
+  border: none; outline: none; background: none;
+  font-family: var(--font); font-size: 13px; color: var(--gray-800); width: 100%;
+}
+.search-input::placeholder { color: var(--gray-300); }
+
+/* view toggle */
+.view-toggle {
+  display: flex; gap: 2px;
+  background: var(--gray-100); border-radius: var(--r-sm);
+  padding: 3px; border: 1px solid var(--border);
+}
+.vt-btn {
+  width: 28px; height: 26px; background: none; border: none;
+  border-radius: 5px; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; color: var(--gray-400);
+  transition: background var(--transition), color var(--transition);
+}
+.vt-btn.active { background: var(--white); color: var(--gray-700); box-shadow: var(--shadow-sm); }
+
+/* ── MODAL BODY ── */
+.modal-body {
+  flex: 1; display: flex; overflow: hidden;
+}
+
+/* ── Q GRID ── */
+.q-grid-wrap {
+  flex: 1; overflow-y: auto; padding: 16px 20px;
+  scrollbar-width: thin; scrollbar-color: var(--gray-200) transparent;
+}
+.q-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.q-grid.list-view {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+/* modal footer */
+.modal-footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--gray-50);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.footer-sel-info {
+  font-size: 13px; color: var(--gray-600);
+  display: flex; align-items: center; gap: 7px;
+}
+.footer-sel-badge {
+  min-width: 22px; height: 22px; border-radius: 11px;
+  background: var(--teal); color: #fff;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 7px; transition: transform 0.2s, background 0.2s;
+}
+.footer-sel-badge.empty { background: var(--gray-200); color: var(--gray-500); }
+.footer-sel-badge.pop { animation: pop 0.25s ease; }
+@keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.35)} 100%{transform:scale(1)} }
+.footer-actions { display: flex; align-items: center; gap: 8px; }
+.btn-set-preview {
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  color: var(--teal-dark); background: var(--teal-light);
+  border: 1px solid var(--teal-mid); border-radius: var(--r-sm);
+  padding: 9px 16px; cursor: pointer;
+  transition: background var(--transition);
+  display: flex; align-items: center; gap: 5px;
+}
+.btn-set-preview:hover { background: var(--teal-mid); }
+.btn-set-preview:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-apply-main {
+  font-family: var(--font); font-size: 13px; font-weight: 700;
+  color: #fff; background: var(--teal);
+  border: none; border-radius: var(--r-sm);
+  padding: 9px 20px; cursor: pointer;
+  transition: background var(--transition);
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-apply-main:hover { background: var(--teal-dark); }
+.btn-apply-main:disabled { background: var(--teal-mid); cursor: not-allowed; }
+
+/* ── QUESTION CARD (grid) ── */
+.q-card {
+  background: var(--white);
+  border: 1.5px solid var(--border-md);
+  border-radius: var(--r-lg);
+  overflow: visible;
+  cursor: pointer;
+  transition: border-color var(--transition), box-shadow var(--transition), transform 0.12s;
+  position: relative;
+  display: flex; flex-direction: column;
+}
+.q-card:hover {
+  border-color: var(--teal-mid);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
+.q-card.selected {
+  border-color: var(--teal);
+  background: linear-gradient(180deg, var(--teal-light) 0%, var(--white) 60%);
+  box-shadow: 0 0 0 1px var(--teal), 0 6px 20px rgba(29,158,117,0.13);
+}
+
+
+
+/* checkbox */
+.q-cb {
+  position: absolute; top: 9px; left: 9px;
+  width: 20px; height: 20px; border-radius: 5px;
+  background: var(--white); border: 1.5px solid var(--gray-300);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2; transition: all 0.14s; pointer-events: none;
+  box-shadow: var(--shadow-sm);
+}
+.q-card.selected .q-cb { background: var(--teal); border-color: var(--teal); }
+.q-cb svg { opacity: 0; transition: opacity 0.14s; }
+.q-card.selected .q-cb svg { opacity: 1; }
+
+/* thumbnail */
+.q-thumb {
+  width: 100%; aspect-ratio: 16/10;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.q-thumb svg { width: 100%; height: 100%; }
+
+/* hover zoom tooltip */
+.q-thumb-tooltip {
+  position: absolute;
+  left: calc(100% + 8px); top: 0;
+  width: 260px;
+  background: var(--white);
+  border: 1px solid var(--border-md);
+  border-radius: var(--r-lg);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.18);
+  overflow: hidden;
+  opacity: 0; pointer-events: none;
+  transform: scale(0.96) translateX(-4px);
+  transform-origin: left top;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 50;
+}
+.q-thumb-tooltip.right { left: auto; right: calc(100% + 8px); transform-origin: right top; transform: scale(0.96) translateX(4px); }
+.q-thumb:hover .q-thumb-tooltip {
+  opacity: 1; pointer-events: auto;
+  transform: scale(1) translateX(0);
+}
+.tooltip-img { width: 100%; background: var(--gray-50); border-bottom: 1px solid var(--border); }
+.tooltip-img svg { width: 100%; height: 180px; display: block; }
+.tooltip-body { padding: 10px 12px 12px; }
+.tooltip-title { font-size: 12px; font-weight: 700; color: var(--gray-800); margin-bottom: 6px; line-height: 1.4; }
+.tooltip-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.tooltip-hint { font-size: 10px; color: var(--gray-400); display: flex; align-items: center; gap: 4px; }
+.tooltip-hint::before { content: '💡'; font-size: 11px; }
+
+/* badge */
+.q-badge {
+  position: absolute; top: 8px; right: 8px;
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.02em;
+}
+/* badge row - left-aligned */
+.q-badge-row {
+  position: absolute; top: 8px; left: 8px;
+  display: flex; gap: 4px; align-items: center;
+}
+.q-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.badge-단일선택형 { background: var(--teal); color: #fff; }
+.badge-다중선택형 { background: #185FA5; color: #fff; }
+.badge-단답형     { background: #1D9E75; color: #fff; }
+.badge-서술형     { background: var(--purple); color: #fff; }
+.badge-연결형     { background: #E8A020; color: #fff; }
+.badge-TF         { background: #E24B4A; color: #fff; }
+/* legacy */
+.badge-주관식 { background: var(--purple-light); color: var(--purple); border: 1px solid rgba(108,92,231,0.2); }
+.badge-선택형 { background: var(--amber-light); color: var(--amber); border: 1px solid rgba(232,160,32,0.2); }
+
+.badge-level { background: rgba(0,0,0,0.42); color: #fff; }
+
+/* card body */
+.q-body { padding: 10px 12px 8px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.q-title { font-size: 12px; font-weight: 700; color: var(--gray-800); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-meta { font-size: 11px; color: var(--gray-400); }
+.q-tags-list { display: none; }
+.q-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
+.tag { font-size: 10px; background: var(--gray-100); color: var(--gray-500); border-radius: 10px; padding: 2px 7px; white-space: nowrap; }
+.q-card.selected .tag { background: rgba(29,158,117,0.10); color: var(--teal-dark); }
+
+/* level pill */
+.level-pill {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 7px;
+  gap: 3px;
+}
+.level-하   { background: #EAF3DE; color: #3B6D11; }
+.level-중하  { background: #E6F1FB; color: #185FA5; }
+.level-중   { background: #F0EFEA; color: #5A5855; }
+.level-중상  { background: var(--amber-light); color: #854F0B; }
+.level-상   { background: var(--red-light); color: #A32D2D; }
+
+/* card footer */
+.q-footer {
+  padding: 0 12px 10px;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 6px;
+}
+.q-footer-tags { display: flex; flex-wrap: wrap; gap: 3px; flex: 1; min-width: 0; }
+.btn-detail {
+  font-family: var(--font); font-size: 11px; font-weight: 600;
+  color: var(--teal-dark); background: none;
+  border: 1px solid var(--teal-mid); border-radius: var(--r-sm);
+  padding: 4px 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: background var(--transition);
+}
+.btn-detail:hover { background: var(--teal-light); }
+
+/* LIST VIEW card */
+.q-grid.list-view .q-card {
+  flex-direction: row; align-items: stretch; border-radius: var(--r-md);
+}
+.q-grid.list-view .q-thumb {
+  width: 120px; flex-shrink: 0; aspect-ratio: auto; height: auto;
+  border-bottom: none; border-right: 1px solid var(--border);
+  border-radius: var(--r-md) 0 0 var(--r-md);
+}
+.q-grid.list-view .q-body {
+  flex: 1; justify-content: center; padding: 12px 14px; min-width: 0;
+}
+.q-grid.list-view .q-body .q-tags-list {
+  display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px;
+}
+.q-grid.list-view .q-footer {
+  flex-direction: column; align-items: flex-end; justify-content: center;
+  padding: 10px 14px; gap: 0; flex-shrink: 0; width: auto;
+  border-left: none;
+}
+.q-grid.list-view .q-footer .q-footer-tags { display: none; }
+.q-grid.list-view .q-cb { top: 50%; left: 9px; transform: translateY(-50%); }
+.q-grid.list-view .q-thumb-tooltip { left: 130px; top: 0; }
+
+/* ────────────────── LAYER OVERLAY ────────────────── */
+.layer-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; backdrop-filter: blur(2px);
+}
+.layer-overlay.hidden { display: none; }
+
+/* ────────────────── PREVIEW MODAL ────────────────── */
+.preview-modal {
+  background: var(--white); border-radius: var(--r-2xl);
+  width: 500px; box-shadow: var(--shadow-lg);
+  overflow: hidden; animation: fadeUp 0.18s ease;
+}
+.preview-header {
+  display: flex; align-items: center;
+  padding: 16px 20px 14px; border-bottom: 1px solid var(--border); gap: 10px;
+}
+.preview-header h3 { font-size: 14px; font-weight: 700; color: var(--gray-800); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-row { display: flex; align-items: center; gap: 5px; }
+.nav-btn {
+  width: 28px; height: 28px; background: var(--gray-100); border: 1px solid var(--border-md);
+  border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; color: var(--gray-600); transition: background var(--transition);
+}
+.nav-btn:hover { background: var(--gray-200); }
+.nav-info { font-size: 11px; color: var(--gray-400); min-width: 40px; text-align: center; }
+.preview-body { padding: 16px 20px; }
+.preview-q-area {
+  background: var(--gray-50); border: 1px solid var(--border);
+  border-radius: var(--r-md); overflow: hidden; margin-bottom: 12px;
+}
+.preview-q-area svg { width: 100%; height: 260px; display: block; }
+.preview-source {
+  font-size: 12px; color: var(--gray-400); margin-bottom: 10px;
+}
+.meta-grid {
+  display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 12px;
+}
+.meta-cell {
+  background: var(--gray-50); border-radius: var(--r-sm); padding: 9px 12px;
+  border: 1px solid var(--border);
+}
+.meta-cell .lbl { font-size: 10px; color: var(--gray-400); font-weight: 600; letter-spacing: 0.04em; margin-bottom: 3px; }
+.meta-cell .val { font-size: 13px; color: var(--gray-800); font-weight: 600; }
+.preview-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.preview-footer {
+  padding: 12px 20px 16px; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.preview-check-row {
+  display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;
+}
+.pcb {
+  width: 20px; height: 20px; border-radius: 5px;
+  background: var(--white); border: 1.5px solid var(--gray-300);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.14s;
+}
+.pcb.on { background: var(--teal); border-color: var(--teal); }
+.pcb-label { font-size: 13px; font-weight: 600; color: var(--gray-700); }
+.btn-close-outline {
+  font-family: var(--font); font-size: 13px; color: var(--gray-700);
+  background: none; border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm); padding: 8px 16px; cursor: pointer;
+  transition: background var(--transition);
+}
+.btn-close-outline:hover { background: var(--gray-100); }
+
+/* ────────────────── SET MODAL ────────────────── */
+.set-modal {
+  background: var(--white); border-radius: var(--r-2xl);
+  width: 740px; max-height: 680px;
+  display: flex; flex-direction: column;
+  box-shadow: var(--shadow-lg); overflow: hidden;
+  animation: fadeUp 0.18s ease;
+}
+.set-header {
+  display: flex; align-items: center;
+  padding: 18px 22px 16px; border-bottom: 1px solid var(--border); gap: 10px;
+}
+.set-header h3 { font-size: 15px; font-weight: 700; color: var(--gray-800); flex: 1; }
+.set-header .set-pill {
+  font-size: 12px; font-weight: 600;
+  background: var(--teal-light); color: var(--teal-dark);
+  border: 1px solid var(--teal-mid); border-radius: 20px; padding: 4px 12px;
+}
+.set-guide {
+  padding: 10px 22px 12px;
+  background: #FFFBF0;
+  border-bottom: 1px solid #FDE8A2;
+  font-size: 12px; color: #7A5C00;
+  display: flex; align-items: center; gap: 6px;
+}
+.set-guide::before { content: '💡'; font-size: 13px; }
+.set-body { overflow-y: auto; flex: 1; padding: 16px 22px; scrollbar-width: thin; }
+.set-item {
+  display: flex; gap: 14px; padding: 14px;
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  margin-bottom: 10px; background: var(--white);
+  align-items: flex-start; transition: border-color var(--transition);
+}
+.set-item:hover { border-color: var(--border-md); }
+.set-num { font-size: 22px; font-weight: 700; color: var(--teal); min-width: 32px; line-height: 1; padding-top: 2px; }
+.set-thumb {
+  width: 116px; height: 82px; background: var(--gray-50);
+  border-radius: var(--r-sm); border: 1px solid var(--border);
+  overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+}
+.set-thumb svg { width: 100%; height: 100%; }
+.set-info { flex: 1; }
+.s-title { font-size: 13px; font-weight: 700; color: var(--gray-800); margin-bottom: 4px; }
+.s-meta { font-size: 12px; color: var(--gray-400); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.s-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.set-remove {
+  background: none; border: none; cursor: pointer; color: var(--gray-300);
+  width: 28px; height: 28px; border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition), color var(--transition); flex-shrink: 0;
+}
+.set-remove:hover { background: var(--red-light); color: var(--red); }
+.set-footer {
+  padding: 14px 22px 16px; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--gray-50);
+}
+.set-footer-l { font-size: 13px; color: var(--gray-600); }
+.set-footer-l strong { color: var(--teal-dark); font-weight: 700; }
+.set-footer-r { display: flex; gap: 8px; }
+.btn-outline-sm {
+  font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--gray-700);
+  background: var(--white); border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm); padding: 9px 16px; cursor: pointer;
+  transition: background var(--transition);
+}
+.btn-outline-sm:hover { background: var(--gray-100); }
+.btn-primary-sm {
+  font-family: var(--font); font-size: 13px; font-weight: 700; color: #fff;
+  background: var(--teal); border: none; border-radius: var(--r-sm);
+  padding: 9px 20px; cursor: pointer; transition: background var(--transition);
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-primary-sm:hover { background: var(--teal-dark); }
+
+/* ────────────────── TOAST ────────────────── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--gray-800); color: #fff; font-family: var(--font);
+  font-size: 13px; font-weight: 500; padding: 11px 22px;
+  border-radius: 20px; pointer-events: none; opacity: 0;
+  transition: opacity 0.25s, transform 0.25s; z-index: 9999; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+
+<!-- ── App shell ── -->
+<div class="app-shell">
+  <div class="topbar">
+    <span style="font-size:16px;color:var(--gray-400);cursor:pointer">&#8592;</span>
+    <span class="topbar-title">2026-05-08 제작</span>
+    <div class="topbar-spacer"></div>
+    <button class="tb-btn">활동 만들기</button>
+    <button class="tb-btn primary">▶ 수업하기</button>
+  </div>
+  <div class="main-area">
+    <div class="slide-panel">
+      <div class="slide-thumb active"><span class="slide-num">1</span><span>슬라이드 1</span></div>
+      <div class="slide-thumb"><span class="slide-num">2</span><span>슬라이드 2</span></div>
+    </div>
+    <div class="canvas-area">
+      <div class="canvas-page">슬라이드 캔버스</div>
+    </div>
+  </div>
+
+  <!-- ══════════ MAIN OVERLAY ══════════ -->
+  <div class="overlay" id="mainOverlay">
+    <div class="modal" role="dialog" aria-modal="true">
+
+      <!-- header -->
+      <div class="modal-header">
+        <div>
+          <h2>스마트 문제은행 불러오기</h2>
+        </div>
+        <span class="header-sub"></span>
+        <div class="modal-header-spacer"></div>
+        <div class="result-count-pill">검색결과 <span id="resultCount">8</span>개</div>
+        <!-- view toggle -->
+        <div class="view-toggle" style="margin-left:4px">
+          <button class="vt-btn active" id="gridBtn" onclick="setView('grid')" title="그리드 뷰">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor"/></svg>
+          </button>
+          <button class="vt-btn" id="listBtn" onclick="setView('list')" title="리스트 뷰">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="3" rx="1.5" fill="currentColor" opacity=".35"/><rect x="1" y="6.5" width="14" height="3" rx="1.5" fill="currentColor" opacity=".7"/><rect x="1" y="11" width="14" height="3" rx="1.5" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <button class="modal-close" onclick="closeAll()" aria-label="닫기">✕</button>
+      </div>
+
+      <!-- filter bar -->
+      <div class="filter-bar">
+        <div class="filter-row-top">
+          <div class="filter-group">
+            <span class="filter-field-label">교육과정</span>
+            <select class="filter-select" id="f-curriculum" onchange="onFilterChange()">
+              <option value="">전체</option>
+              <option value="2022">2022 개정</option>
+              <option value="2015">2015 개정</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <span class="filter-field-label">학교급</span>
+            <select class="filter-select" id="f-school" onchange="onFilterChange()">
+              <option value="">전체</option>
+              <option value="초등학교" selected>초등학교</option>
+              <option value="중학교">중학교</option>
+              <option value="고등학교">고등학교</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <span class="filter-field-label">학년</span>
+            <select class="filter-select" id="f-grade" onchange="onFilterChange()">
+              <option value="">전체</option>
+              <option value="1">1학년</option>
+              <option value="2">2학년</option>
+              <option value="3">3학년</option>
+              <option value="4">4학년</option>
+              <option value="5">5학년</option>
+              <option value="6">6학년</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <span class="filter-field-label">교과과정(단원명)</span>
+            <select class="filter-select" id="f-unit" onchange="onFilterChange()">
+              <option value="">전체</option>
+              <option value="1.삼각형의 작도">1.삼각형의 작도</option>
+              <option value="2.삼각형의 합동">2.삼각형의 합동</option>
+              <option value="3.평행선과 각">3.평행선과 각</option>
+              <option value="4.사각형의 성질">4.사각형의 성질</option>
+              <option value="5.원과 부채꼴">5.원과 부채꼴</option>
+            </select>
+          </div>
+          <div class="filter-group no-grow">
+            <span class="filter-field-label">검색</span>
+            <div class="search-box">
+              <svg class="search-icon" width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="9" r="6"/><line x1="13.5" y1="13.5" x2="18" y2="18"/></svg>
+              <input class="search-input" placeholder="단원, 키워드 검색" oninput="onFilterChange()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- body -->
+      <div class="modal-body">
+        <div class="q-grid-wrap">
+          <div class="q-grid" id="qGrid"></div>
+          <div id="emptyState" style="display:none;padding:48px;text-align:center;color:var(--gray-400)">
+            <div style="font-size:32px;margin-bottom:12px">🔍</div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px">검색 결과가 없습니다</div>
+            <div style="font-size:12px">필터 조건을 변경해 보세요</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- footer -->
+      <div class="modal-footer">
+        <div class="footer-sel-info">
+          <span>선택한 문항</span>
+          <span class="footer-sel-badge empty" id="spBadge">0</span>
+          <span>개</span>
+        </div>
+        <div class="footer-actions">
+          <button class="btn-set-preview" id="setPreviewBtn" onclick="openSetPreview()" disabled>
+            <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="14" height="13" rx="2"/><line x1="7" y1="8" x2="13" y2="8"/><line x1="7" y1="11" x2="11" y2="11"/></svg>
+            세트지 미리보기
+          </button>
+          <button class="btn-apply-main" id="applyBtn" onclick="applyToSlide()" disabled>
+            슬라이드에 적용
+            <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><polyline points="4 10 16 10"/><polyline points="11 5 16 10 11 15"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- .modal -->
+
+    <!-- ══ PREVIEW LAYER ══ -->
+    <div class="layer-overlay hidden" id="previewOverlay">
+      <div class="preview-modal">
+        <div class="preview-header">
+          <h3 id="pvTitle">문항 미리보기</h3>
+          <button class="modal-close" onclick="closePv()">✕</button>
+        </div>
+        <div class="preview-body">
+          <div class="preview-q-area" id="pvImg"></div>
+          <div class="preview-source" id="pvSource"></div>
+          <div class="meta-grid">
+            <div class="meta-cell"><div class="lbl">단원</div><div class="val" id="pvUnit">—</div></div>
+          </div>
+          <div class="preview-tags" id="pvTags"></div>
+        </div>
+        <div class="preview-footer">
+          <label class="preview-check-row" onclick="toggleFromPv()">
+            <div class="pcb" id="pvCb"></div>
+            <span class="pcb-label" id="pvCbLabel">이 문항 선택하기</span>
+          </label>
+          <button class="btn-close-outline" onclick="closePv()">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SET LAYER ══ -->
+    <div class="layer-overlay hidden" id="setOverlay">
+      <div class="set-modal">
+        <div class="set-header">
+          <h3>세트지 미리보기</h3>
+          <span class="set-pill" id="setCountPill">총 0문항</span>
+          <button class="modal-close" onclick="closeSet()">✕</button>
+        </div>
+        <div class="set-guide">선택한 문항이 슬라이드에 추가되는 순서를 확인하고 조정하세요. 문항을 삭제하려면 × 버튼을 누르세요.</div>
+        <div class="set-body" id="setBody"></div>
+        <div class="set-footer">
+          <span class="set-footer-l">총 <strong id="setFooterN">0</strong>문항이 슬라이드에 추가됩니다</span>
+          <div class="set-footer-r">
+            <button class="btn-outline-sm" onclick="closeSet()">계속 선택하기</button>
+            <button class="btn-primary-sm" onclick="applyFromSet()">
+              슬라이드에 적용
+              <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><polyline points="4 10 16 10"/><polyline points="11 5 16 10 11 15"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- overlay -->
+</div><!-- app-shell -->
+
+<div class="toast" id="toast"></div>
+
+<!-- SVG symbol defs -->
+<svg style="display:none">
+  <symbol id="svg-tri1" viewBox="0 0 160 120">
+    <rect width="160" height="120" fill="#f9f9f8"/>
+    <text x="8" y="16" font-size="9" fill="#5A5855" font-family="sans-serif">다음 OA=OC, AB=CD일 때,</text>
+    <text x="8" y="27" font-size="9" fill="#5A5855" font-family="sans-serif">△AOD≡△COB임을 설명하시오.</text>
+    <polygon points="30,100 80,45 130,100" fill="none" stroke="#2C2B28" stroke-width="1.5"/>
+    <text x="26" y="108" font-size="9" fill="#2C2B28">O</text>
+    <text x="76" y="42" font-size="9" fill="#2C2B28">B</text>
+    <text x="128" y="108" font-size="9" fill="#2C2B28">D</text>
+    <line x1="55" y1="72" x2="105" y2="72" stroke="#2C2B28" stroke-width="1.2"/>
+    <text x="57" y="68" font-size="8" fill="#2C2B28">A</text>
+    <text x="99" y="68" font-size="8" fill="#2C2B28">C</text>
+    <line x1="50" y1="95" x2="56" y2="90" stroke="#2C2B28" stroke-width="1.2"/>
+    <line x1="53" y1="95" x2="59" y2="90" stroke="#2C2B28" stroke-width="1.2"/>
+    <line x1="103" y1="95" x2="109" y2="90" stroke="#2C2B28" stroke-width="1.2"/>
+    <line x1="106" y1="95" x2="112" y2="90" stroke="#2C2B28" stroke-width="1.2"/>
+  </symbol>
+  <symbol id="svg-tri2" viewBox="0 0 160 120">
+    <rect width="160" height="120" fill="#f9f9f8"/>
+    <text x="8" y="15" font-size="8.5" fill="#5A5855" font-family="sans-serif">삼각형 ABC와 △DEF에서</text>
+    <text x="8" y="26" font-size="8.5" fill="#5A5855" font-family="sans-serif">AB=DE, ∠B=∠E일 때 합동 조건은?</text>
+    <polygon points="20,105 80,35 140,105" fill="none" stroke="#2C2B28" stroke-width="1.5"/>
+    <text x="14" y="113" font-size="9" fill="#2C2B28">A</text>
+    <text x="76" y="32" font-size="9" fill="#2C2B28">B</text>
+    <text x="138" y="113" font-size="9" fill="#2C2B28">C</text>
+    <line x1="78" y1="35" x2="78" y2="105" stroke="#2C2B28" stroke-width="1" stroke-dasharray="3,2"/>
+    <text x="81" y="72" font-size="8" fill="#9E9C94">h</text>
+  </symbol>
+  <symbol id="svg-quad1" viewBox="0 0 160 120">
+    <rect width="160" height="120" fill="#f9f9f8"/>
+    <text x="8" y="15" font-size="8.5" fill="#5A5855" font-family="sans-serif">평행사변형 ABCD에서 대각선의</text>
+    <text x="8" y="26" font-size="8.5" fill="#5A5855" font-family="sans-serif">성질을 이용하여 증명하시오.</text>
+    <polygon points="30,95 60,40 130,40 100,95" fill="none" stroke="#2C2B28" stroke-width="1.5"/>
+    <line x1="30" y1="95" x2="130" y2="40" stroke="#2C2B28" stroke-width="1" stroke-dasharray="3,2"/>
+    <line x1="60" y1="40" x2="100" y2="95" stroke="#2C2B28" stroke-width="1" stroke-dasharray="3,2"/>
+    <text x="22" y="103" font-size="9" fill="#2C2B28">A</text><text x="56" y="37" font-size="9" fill="#2C2B28">B</text>
+    <text x="128" y="37" font-size="9" fill="#2C2B28">C</text><text x="97" y="103" font-size="9" fill="#2C2B28">D</text>
+  </symbol>
+  <symbol id="svg-angle1" viewBox="0 0 160 120">
+    <rect width="160" height="120" fill="#f9f9f8"/>
+    <text x="8" y="15" font-size="8.5" fill="#5A5855" font-family="sans-serif">다음 그림에서 ∠x의 크기를</text>
+    <text x="8" y="26" font-size="8.5" fill="#5A5855" font-family="sans-serif">구하시오.</text>
+    <line x1="20" y1="65" x2="140" y2="65" stroke="#2C2B28" stroke-width="1.5"/>
+    <line x1="20" y1="85" x2="140" y2="85" stroke="#2C2B28" stroke-width="1.5"/>
+    <line x1="60" y1="40" x2="90" y2="105" stroke="#2C2B28" stroke-width="1.5"/>
+    <text x="70" y="62" font-size="9" fill="#2C2B28">55°</text>
+    <text x="78" y="83" font-size="9" fill="#1D9E75" font-weight="bold">x</text>
+  </symbol>
+  <symbol id="svg-circle1" viewBox="0 0 160 120">
+    <rect width="160" height="120" fill="#f9f9f8"/>
+    <text x="8" y="15" font-size="8.5" fill="#5A5855" font-family="sans-serif">원 O에서 호 AB의 길이를</text>
+    <text x="8" y="26" font-size="8.5" fill="#5A5855" font-family="sans-serif">구하시오. (단, OA=5cm)</text>
+    <circle cx="80" cy="75" r="38" fill="none" stroke="#2C2B28" stroke-width="1.5"/>
+    <line x1="80" y1="75" x2="110" y2="45" stroke="#2C2B28" stroke-width="1.2"/>
+    <line x1="80" y1="75" x2="50" y2="45" stroke="#2C2B28" stroke-width="1.2"/>
+    <text x="78" y="72" font-size="8" fill="#2C2B28">O</text>
+    <text x="112" y="44" font-size="8" fill="#2C2B28">A</text><text x="44" y="44" font-size="8" fill="#2C2B28">B</text>
+    <path d="M 110 45 A 38 38 0 0 0 50 45" fill="none" stroke="#1D9E75" stroke-width="2"/>
+    <text x="78" y="36" font-size="9" fill="#1D9E75">60°</text>
+  </symbol>
+  <symbol id="svg-eq1" viewBox="0 0 160 120">
+    <rect width="160" height="120" fill="#f9f9f8"/>
+    <text x="8" y="15" font-size="8.5" fill="#5A5855" font-family="sans-serif">이등변삼각형 ABC에서</text>
+    <text x="8" y="26" font-size="8.5" fill="#5A5855" font-family="sans-serif">AB=AC=8, BC=6일 때 넓이는?</text>
+    <polygon points="80,38 30,100 130,100" fill="none" stroke="#2C2B28" stroke-width="1.5"/>
+    <line x1="80" y1="38" x2="80" y2="100" stroke="#2C2B28" stroke-width="1" stroke-dasharray="3,2"/>
+    <text x="76" y="34" font-size="9" fill="#2C2B28">A</text>
+    <text x="24" y="108" font-size="9" fill="#2C2B28">B</text><text x="128" y="108" font-size="9" fill="#2C2B28">C</text>
+    <line x1="52" y1="65" x2="58" y2="60" stroke="#2C2B28" stroke-width="1.2"/>
+    <line x1="102" y1="65" x2="108" y2="60" stroke="#2C2B28" stroke-width="1.2"/>
+  </symbol>
+  <symbol id="svg-construct1" viewBox="0 0 160 120">
+    <rect width="160" height="120" fill="#f9f9f8"/>
+    <text x="8" y="15" font-size="8.5" fill="#5A5855" font-family="sans-serif">조건을 만족하는 삼각형을</text>
+    <text x="8" y="26" font-size="8.5" fill="#5A5855" font-family="sans-serif">작도하시오. (두 변과 그 끼인각)</text>
+    <line x1="20" y1="95" x2="90" y2="95" stroke="#2C2B28" stroke-width="1.5"/>
+    <line x1="20" y1="95" x2="50" y2="48" stroke="#2C2B28" stroke-width="1.5"/>
+    <text x="50" y="90" font-size="9" fill="#2C2B28">5cm</text>
+    <text x="22" y="72" font-size="9" fill="#2C2B28">4cm</text>
+    <path d="M 30 95 A 12 12 0 0 0 24.5 83" fill="none" stroke="#2C2B28" stroke-width="1.2"/>
+    <text x="34" y="90" font-size="8" fill="#2C2B28">60°</text>
+  </symbol>
+  <symbol id="svg-proof1" viewBox="0 0 160 120">
+    <rect width="160" height="120" fill="#f9f9f8"/>
+    <text x="8" y="15" font-size="8.5" fill="#5A5855" font-family="sans-serif">△ABC에서 AB=AC이고</text>
+    <text x="8" y="26" font-size="8.5" fill="#5A5855" font-family="sans-serif">∠B=∠C임을 증명하시오.</text>
+    <polygon points="80,35 25,100 135,100" fill="none" stroke="#2C2B28" stroke-width="1.5"/>
+    <line x1="28" y1="92" x2="34" y2="92" stroke="#2C2B28" stroke-width="1.5"/>
+    <line x1="31" y1="90" x2="31" y2="96" stroke="#2C2B28" stroke-width="1.5"/>
+    <line x1="125" y1="92" x2="131" y2="92" stroke="#2C2B28" stroke-width="1.5"/>
+    <line x1="128" y1="90" x2="128" y2="96" stroke="#2C2B28" stroke-width="1.5"/>
+    <text x="76" y="32" font-size="9" fill="#2C2B28">A</text>
+    <text x="18" y="108" font-size="9" fill="#2C2B28">B</text><text x="132" y="108" font-size="9" fill="#2C2B28">C</text>
+  </symbol>
+</svg>
+
+<script>
+const ALL_Q = [
+  { id:0, title:'[단일선택형] 1.삼각형의 작도', meta:'@251 비바샘 중단원 수준별 문제', tags:['삼각형','작도','평등선의 작도'], type:'단일선택형', level:'중', source:'비바샘 중단원', unit:'1.삼각형의 작도', svgId:'svg-construct1', school:'초등학교', grade:'5', curriculum:'2022' },
+  { id:1, title:'[서술형] 2.삼각형의 합동', meta:'@251 비바샘 중단원 수준별 문제', tags:['삼각형','작도','삼각형의 합동'], type:'서술형', level:'중상', source:'비바샘 중단원', unit:'2.삼각형의 합동', svgId:'svg-tri1', school:'초등학교', grade:'5', curriculum:'2022' },
+  { id:2, title:'[다중선택형] 1.삼각형의 작도', meta:'@251 비바샘 중단원 수준별 문제', tags:['삼각형','작도','크기가 같은 각의 작도'], type:'다중선택형', level:'중', source:'비바샘 중단원', unit:'1.삼각형의 작도', svgId:'svg-tri2', school:'초등학교', grade:'6', curriculum:'2022' },
+  { id:3, title:'[TF] 2.삼각형의 합동', meta:'@251 비바샘 중단원 수준별 문제', tags:['삼각형','작도','삼각형의 합동 조건'], type:'TF', level:'상', source:'비바샘 중단원', unit:'2.삼각형의 합동', svgId:'svg-proof1', school:'초등학교', grade:'6', curriculum:'2022' },
+  { id:4, title:'[단답형] 평행선과 동위각', meta:'@251 비바샘 중단원 수준별 문제', tags:['평행선','동위각','엇각'], type:'단답형', level:'중하', source:'비바샘 중단원', unit:'3.평행선과 각', svgId:'svg-angle1', school:'초등학교', grade:'4', curriculum:'2022' },
+  { id:5, title:'[연결형] 이등변삼각형의 넓이', meta:'@251 비바샘 중단원 수준별 문제', tags:['삼각형','이등변삼각형','넓이'], type:'연결형', level:'하', source:'비바샘 중단원', unit:'2.삼각형의 합동', svgId:'svg-eq1', school:'초등학교', grade:'3', curriculum:'2015' },
+  { id:6, title:'[단답형] 평행사변형의 대각선', meta:'@251 비바샘 중단원 수준별 문제', tags:['평행사변형','대각선','증명'], type:'단답형', level:'중', source:'비바샘 중단원', unit:'4.사각형의 성질', svgId:'svg-quad1', school:'초등학교', grade:'4', curriculum:'2015' },
+  { id:7, title:'[단일선택형] 원과 부채꼴', meta:'@251 비바샘 중단원 수준별 문제', tags:['원','부채꼴','호의 길이'], type:'단일선택형', level:'중상', source:'비바샘 중단원', unit:'5.원과 부채꼴', svgId:'svg-circle1', school:'초등학교', grade:'6', curriculum:'2022' },
+];
+
+let filteredQ = [...ALL_Q];
+const selected = new Set();
+let pvIdx = 0;
+let currentView = 'grid';
+
+/* ── FILTER ── */
+function onFilterChange() {
+  const cv = document.getElementById('f-curriculum').value;
+  const sv = document.getElementById('f-school').value;
+  const gv = document.getElementById('f-grade').value;
+  const uv = document.getElementById('f-unit').value;
+  const kw = document.querySelector('.search-input').value.toLowerCase().trim();
+  filteredQ = ALL_Q.filter(q => {
+    if(cv && q.curriculum !== cv) return false;
+    if(sv && q.school !== sv) return false;
+    if(gv && q.grade !== gv) return false;
+    if(uv && q.unit !== uv) return false;
+    if(kw && !q.title.includes(kw) && !q.tags.join(' ').toLowerCase().includes(kw) && !q.unit.toLowerCase().includes(kw)) return false;
+    return true;
+  });
+  document.getElementById('resultCount').textContent = filteredQ.length;
+  renderGrid();
+}
+
+function resetFilters() {
+  ['f-curriculum','f-school','f-grade','f-unit'].forEach(id => document.getElementById(id).value = '');
+  document.querySelector('.search-input').value = '';
+  onFilterChange();
+}
+
+/* ── VIEW ── */
+function setView(v) {
+  currentView = v;
+  document.getElementById('qGrid').className = 'q-grid' + (v === 'list' ? ' list-view' : '');
+  document.getElementById('gridBtn').classList.toggle('active', v === 'grid');
+  document.getElementById('listBtn').classList.toggle('active', v === 'list');
+}
+
+/* ── RENDER GRID ── */
+function levelClass(l) {
+  return 'level-' + l;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('qGrid');
+  const empty = document.getElementById('emptyState');
+  if(!filteredQ.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  // determine tooltip direction (right half of grid → show left)
+  grid.innerHTML = filteredQ.map((q, i) => {
+    const isSel = selected.has(q.id);
+    const isRight = (i % 4) >= 2;
+    return `
+    <div class="q-card${isSel?' selected':''}" id="qcard-${q.id}" onclick="toggleSel(${q.id})">
+      <div class="q-cb">
+        <svg width="11" height="9" viewBox="0 0 11 9" fill="none"><polyline points="1.5,4.5 4.5,7.5 9.5,1.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="q-thumb">
+        <svg><use href="#${q.svgId}"/></svg>
+        <!-- badge row: 좌측 문항유형 -->
+        <div class="q-badge-row">
+          <span class="q-badge badge-${q.type}">${q.type}</span>
+        </div>
+        <!-- hover tooltip -->
+        <div class="q-thumb-tooltip${isRight?' right':''}">
+          <div class="tooltip-img"><svg viewBox="0 0 160 120"><use href="#${q.svgId}"/></svg></div>
+          <div class="tooltip-body">
+            <div class="tooltip-title">${q.title}</div>
+            <div class="tooltip-meta">
+              <span class="tag">${q.type}</span>
+              <span class="tag">${q.unit}</span>
+            </div>
+            <div class="tooltip-hint">클릭하면 선택, 미리보기로 상세 확인</div>
+          </div>
+        </div>
+      </div>
+      <div class="q-body">
+        <div class="q-title">${q.title}</div>
+        <div class="q-meta">${q.meta}</div>
+        <div class="q-tags-list">${q.tags.map(t=>`<span class="tag">#${t}</span>`).join('')}</div>
+      </div>
+      <div class="q-footer">
+        <div class="q-footer-tags">${q.tags.map(t=>`<span class="tag">#${t}</span>`).join('')}</div>
+        <button class="btn-detail" onclick="openPv(event,${q.id})">문항 미리보기</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── SELECT ── */
+function toggleSel(id) {
+  if(selected.has(id)) { selected.delete(id); } else { selected.add(id); }
+  const card = document.getElementById('qcard-'+id);
+  if(card) card.classList.toggle('selected', selected.has(id));
+  updateSelPanel();
+  // sync preview
+  const pvOv = document.getElementById('previewOverlay');
+  if(!pvOv.classList.contains('hidden') && filteredQ[pvIdx]?.id === id) updatePvCb();
+}
+
+function clearAll() {
+  selected.forEach(id => {
+    selected.delete(id);
+    const c = document.getElementById('qcard-'+id);
+    if(c) c.classList.remove('selected');
+  });
+  updateSelPanel();
+}
+
+function updateSelPanel() {
+  const n = selected.size;
+  const badge = document.getElementById('spBadge');
+  badge.textContent = n;
+  badge.classList.toggle('empty', n === 0);
+  badge.classList.remove('pop');
+  void badge.offsetWidth;
+  if(n > 0) badge.classList.add('pop');
+  document.getElementById('applyBtn').disabled = n === 0;
+  document.getElementById('setPreviewBtn').disabled = n === 0;
+}
+
+/* ── PREVIEW ── */
+function openPv(e, id) {
+  e.stopPropagation();
+  pvIdx = filteredQ.findIndex(q=>q.id===id);
+  if(pvIdx < 0) pvIdx = 0;
+  renderPv();
+  document.getElementById('previewOverlay').classList.remove('hidden');
+}
+
+function renderPv() {
+  const q = filteredQ[pvIdx];
+  if(!q) return;
+  document.getElementById('pvTitle').textContent = q.title;
+  document.getElementById('pvSource').textContent = q.meta;
+  document.getElementById('pvUnit').textContent = q.unit;
+  document.getElementById('pvTags').innerHTML = q.tags.map(t=>`<span class="tag" style="font-size:11px">#${t}</span>`).join('');
+  document.getElementById('pvImg').innerHTML = `<svg viewBox="0 0 160 120"><use href="#${q.svgId}"/></svg>`;
+  updatePvCb();
+}
+
+function updatePvCb() {
+  const q = filteredQ[pvIdx];
+  if(!q) return;
+  const on = selected.has(q.id);
+  const cb = document.getElementById('pvCb');
+  cb.className = 'pcb' + (on?' on':'');
+  cb.innerHTML = on ? `<svg width="11" height="9" viewBox="0 0 11 9" fill="none"><polyline points="1.5,4.5 4.5,7.5 9.5,1.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : '';
+  document.getElementById('pvCbLabel').textContent = on ? '선택 해제하기' : '이 문항 선택하기';
+}
+
+function toggleFromPv() { if(filteredQ[pvIdx]) toggleSel(filteredQ[pvIdx].id); }
+function prevPv() { pvIdx = (pvIdx-1+filteredQ.length)%filteredQ.length; renderPv(); }
+function nextPv() { pvIdx = (pvIdx+1)%filteredQ.length; renderPv(); }
+function closePv() { document.getElementById('previewOverlay').classList.add('hidden'); }
+
+/* ── SET PREVIEW ── */
+function openSetPreview() {
+  if(!selected.size) return;
+  renderSet();
+  document.getElementById('setOverlay').classList.remove('hidden');
+}
+
+function renderSet() {
+  const items = [...selected].map(id=>ALL_Q.find(q=>q.id===id)).filter(Boolean);
+  document.getElementById('setCountPill').textContent = `총 ${items.length}문항`;
+  document.getElementById('setFooterN').textContent = items.length;
+  document.getElementById('setBody').innerHTML = items.map((q,i)=>`
+    <div class="set-item">
+      <div class="set-num">${String(i+1).padStart(2,'0')}</div>
+      <div class="set-thumb"><svg><use href="#${q.svgId}"/></svg></div>
+      <div class="set-info">
+        <div class="s-title">${q.title}</div>
+        <div class="s-meta">
+          ${q.type} &nbsp;·&nbsp; ${q.unit}
+        </div>
+        <div class="s-tags">${q.tags.map(t=>`<span class="tag">#${t}</span>`).join('')}</div>
+      </div>
+      <button class="set-remove" onclick="removeFromSet(${q.id})" title="제거">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg>
+      </button>
+    </div>
+  `).join('');
+}
+
+function removeFromSet(id) {
+  selected.delete(id);
+  const c = document.getElementById('qcard-'+id);
+  if(c) c.classList.remove('selected');
+  updateSelPanel();
+  if(!selected.size) { closeSet(); return; }
+  renderSet();
+}
+
+function closeSet() { document.getElementById('setOverlay').classList.add('hidden'); }
+function applyFromSet() { closeSet(); applyToSlide(); }
+
+function applyToSlide() {
+  const n = selected.size;
+  closeAll();
+  showToast(`✓ ${n}개 문항이 슬라이드에 추가되었습니다`);
+}
+
+function closeAll() { document.getElementById('mainOverlay').classList.add('hidden'); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// init
+renderGrid();
+</script>
+</body>
+</html>
