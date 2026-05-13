@@ -219,6 +219,17 @@ body {
   font-family: var(--font); font-size: 13px; color: var(--gray-800); width: 100%;
 }
 .search-input::placeholder { color: var(--gray-300); }
+.search-type-select {
+  font-family: var(--font); font-size: 12px; font-weight: 600;
+  color: var(--teal-dark); background: var(--teal-light);
+  border: none; outline: none; cursor: pointer;
+  padding: 2px 18px 2px 4px; border-radius: 4px;
+  appearance: none; flex-shrink: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%230F6E56' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 4px center;
+}
+.search-type-select:focus { outline: none; }
+.search-divider { width: 1px; height: 14px; background: var(--border-md); flex-shrink: 0; }
 
 /* view toggle */
 .view-toggle {
@@ -822,8 +833,13 @@ body {
           <div class="filter-group no-grow">
             <span class="filter-field-label">검색</span>
             <div class="search-box">
+              <select class="search-type-select" id="f-search-type" onchange="onFilterChange()">
+                <option value="title">콘텐츠명</option>
+                <option value="tag">해시태그</option>
+              </select>
+              <div class="search-divider"></div>
               <svg class="search-icon" width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="9" r="6"/><line x1="13.5" y1="13.5" x2="18" y2="18"/></svg>
-              <input class="search-input" placeholder="단원, 키워드 검색" oninput="onFilterChange()">
+              <input class="search-input" placeholder="콘텐츠 검색" oninput="onFilterChange()">
             </div>
           </div>
         </div>
